@@ -5,15 +5,15 @@
 ####2，指令的分类
 + 装饰型；负责添加功能的
 + 组件式：替换成完整的组件，可以复用
-####3,指令的格式
-````
+#### 3,指令的格式
+```
 var app=angular.module('appModule',[]);
 app.directive('myDrag',function(){
      restrict:'限制使用范围的的格式'
 
 })
-````
-####4.常用的格式
+```
+#### 4.常用的格式
 + 设置属性 Attribute   (A)
 ```
 <div my-drag></div>
@@ -31,10 +31,10 @@ app.directive('myDrag',function(){
 <!-- directive:my-drag -->
 ````
 
-####模板替换
+#### 模板替换
 + template:要替换的模板
 + 注意：替换外层的原有标签，要求模板必须有一个根节点 replace:true
-####装饰型指令
+####  装饰型指令
  ````
  <div color-red>hello zpfx</div>
  <div drag></div>
@@ -103,10 +103,5 @@ app.factory('Calc', function () { //会先new provider
         this.currency = '$';
         return {}
 ```
-
-
-
-
-
 
 
