@@ -1,0 +1,412 @@
+###angular指令
+1. 指令不依赖于控制器
+2. 指令不会默认产生作用域，但是可以声明作用域，ng-repeat会创建作用域
+3. 指令的格式：
+- 属性:Attribute A
+- 
+```
+<div drag></div>
+```
+ - 元素：Element E
+```
+<drag></drag>
+```
+- 类：Class C
+```
+<div class="drag"></div>
+```
+- 注释：Comment M
+```
+<!-- directive:drag -->
+```
+4. 指令分为2种：
+- 装饰性指令：负责添加功能，例如拖拽
+- 组件式：替换成完整的组件
+```
+add.directive('myDrag',function(){
+	 return{
+			restrict:'ECMA',
+			replace:true,
+			templace:`<div><h1>hello</h1><span>你好<span></div>`
+      }
+})
+```
+> 1. 命名规范：在html中，多个单词以短线链接，在js中改为驼峰命名法
+> 2. restrict：限制生效范围
+> 3. replace：把原有的标签替换掉，要求模板必须有一个根节点（上边的div）
+> 4. 只要涉及到模板，外边就要有一个根节点div
+> 5. 有template的都是组件式的
+####装饰性
+1. 在angular中，我们不操作dom，而是操作link，连接作用域和视图
+```
+<div color-red><div>
+link:function(scope,element,attr){
+		
+}
+```
+> 1. scope:当前指令所在的作用域，指令没有创建作用域，所以使用的是上一级，在这里指令是color-red，作用域是div
+> 2. element：当前指令所在的元素（div），这里是jq对象，所以要使用jq方法，angular中需要加单位
+> 3. angular中的this：angular.element(this)=$(this)
+> 4. attr:当前指令上的所有属性
+
+2. 特点：可以复用，不会覆盖
+3. 想用jq写代码的时候，需要先引入jq包，再引入angular
+####组件式
+1. 在angular中，我们要用到一些复杂的模板，为了防止代码的冗余，需要把他们写在另一个页面中，通过指令引入
+```
+templateUrl:`panel.html`
+```
+2. 用了模板的内容，但还想保留原有标签中的内容,指定放在哪个位置，要放在哪个标签上就在哪里写指令ng-transclude
+```
+tanslclude:true
+```
+3. 创建一个独立的作用域
+- 默认不产生作用域，而且拥有父子关系
+```
+scope:true;
+scope:{}
+```
+- 这两个区别：
+    + true：可以不断绝父子关系，仍然可以向上级查找
+    + {}：断绝了父子关系，可以认为与$rootScope同级
+####传递数据
+1. 传递一些数据，可以通过属性传递，attr，props
+```
+html中的标签：
+<panel title='这是标签1'>内容一</panel>
+<panel title='这是标签2'>内容二</panel>
+
+
+script中：
+app.directive('panel', function () {
+        return {
+            restrict: 'E',
+            //封装好一个组件可以多次调用
+            templateUrl: `4(2).panel.html`,
+            transclude: true,
+            link: function (scope, element, attr) {
+                //目的：想拿到属性中的值放在heading中
+                scope.title = attr.title;//将数据挂载在作用域上，可以通过{{}}来获取
+            },
+            scope: true,//产生独立作用域
+            //            scope:{}//产生独立作用域
+        }
+    })
+
+4(2).panel.html中：
+<div class="panel panel-danger">
+    <div class="panel-heading">{{title}}</div>
+    <div class="panel-body" ng-transclude></div>
+    <div class="panel-footer"></div>
+</div>
+
+```
+2. 传递字符串@
+```
+html中的标签：
+<panel title='这是标签1'>内容一</panel>
+
+
+script中：
+var app = angular.module('appModule', []);
+    app.directive('panel', function () {
+        return {
+            restrict: 'E',
+            templateUrl: `4(2).panel.html`,
+            transclude: true,
+            link: function (scope, element, attr) {
+            },
+            scope:{ //scope.title='zfpx1',声明的的是一个字符串，和外边的
+                title:'@',//@：取的是title对应的字符串,相同的可以去掉纳
+//                title:'@tit'
+            }
+        }
+    })
+```
+   - 根作用域上的方法左右的作用域都可以用，但是独立作用域中的值的变化不会影响根作用域的值，而根作用域的值的变化会影响独立作用域中的值，由此可以知道@的数据绑定是单向的
+```
+html中：
+ <input type="text" ng-model="title">
+            <panel title="{{title}}">内容一</panel>
+
+
+script中：
+app.run(['$rootScope',function ($rootScope) {
+        $rootScope.title='zfpx'
+    }]);
+    app.directive('panel', function () {
+        return {
+            restrict: 'E',
+            templateUrl: `6(2)panel.html`,
+            transclude: true,
+            link: function (scope, element, attr) {
+            },
+            scope:{ //scope.title='zfpx1',声明的的是一个字符串，和外边的作用域没有关系
+                title:'@',
+            }
+        }
+    })
+```
+```
+<div class="panel panel-danger">
+    <div class="panel-heading">{{title}}</div>
+    <div class="panel-body" ng-transclude></div>
+    <div class="panel-footer"><input type="text" ng-model="title"></div>
+</div>
+```
+3. 传递变量 =
+- 改变任意作用域中的只都会改变另一个作用域上的值，由此可以看出=的数据绑定是双向的
+- 
+```
+html中：
+<input type="text" ng-model="title">
+            <panel title="title">内容一</panel>
+
+
+script中：
+app.run(['$rootScope',function ($rootScope) {
+        $rootScope.title='zfpx'
+    }])
+    app.directive('panel', function () {
+        return {
+            restrict: 'E',
+            templateUrl: `4(2).panel.html`,
+            transclude: true,
+            link: function (scope, element, attr) {
+            },
+            scope:{
+                title:'=',
+            }
+        }
+    })
+```
+4. 传递方法 &
+- 指令中有独立作用域，能直接调用父级的方法，要通过属性传递到指令中，传递的时候需要用（属性="作用域中的方法()"，指令中用&来接收）
+- 
+```
+html中：
+<!--这里是形参-->
+<panel ss="say(a,b)">内容一</panel>
+
+
+script中：
+app.run(['$rootScope', function ($rootScope) {
+        /*这里是形参*/
+        $rootScope.say = function (a,b) {
+            alert(a);
+            alert(b)
+        }
+    }]);
+    app.directive('panel', function () {
+        return {
+            restrict: 'E',
+            /*这里是实参*/
+            template: `<button ng-click="s({a:'你好',b:'不好'})">say</button>`,
+            transclude: true,
+            scope: {
+                s: '&ss',
+            }
+        }
+    })
+```
+####其他指令
+1. ng-hide和ng-show操作的是样式
+2. ng-if操作的是dom元素，会产生一个作用域，如果if为false，则内部代码消失，内部代码不执行
+
+
+
+###服务
+1. provide
+- 最大的服务，可以配置
+- new函数》config》$get
+- 默认provider会被实例化
+- 当我们在控制器中使用provider的时候，会调用他的$get方法
+```
+app.config(function(Cac1Provider){
+//Cac1Provider是Cacl是声明的函数的实例
+        Cac1Provider.currency='RMB';//会等provider创建好实例再进行配置，先执行provider，在执行config
+    })
+
+
+    app.provider('Cac1',function () {  //函数是服务的定义
+        this.currency='$';
+        this.$get=function () {
+            return {  //返回的对象是公用的
+                "+":(a,b)=>{
+                        return this.currency+(a+b)
+                    }
+            }
+        }
+    });
+
+
+    app.controller('oneCtrl',function ($scope,Cac1) {  //Cacl是指return返回的对象
+        console.log(Cac1["+"](1,2))
+    });
+```
+
+2. factory
+- 后面的函数是provider中$get方法中对应的
+- 后面的函数就是$get函数
+- factory不支持配置，因为配置实在factory之前执行的也就没有意义，factory是基于provider的
+```
+app.factory('Cac1',function () {  
+        this.currency='$';
+            return {
+                "+":(a,b)=>{
+                    return this.currency+(a+b)
+                }
+            }
+    });
+
+
+    app.controller('oneCtrl',function ($scope,Cac1) {
+        console.log(Cac1["+"](1,2))
+    });
+```
+
+3. service
+- service是基于factory的
+- factory返回的对象是service函数实例化后的结果
+- this指实例，Cacl
+```
+app.service('Cac1',function () {
+        //this指实例，Cacl
+        this['+']=(a,b)=>a+b;
+        this['-']=(a,b)=>a-b;
+        /*return {
+            "+":(a,b)=>{
+                return this.currency+(a+b)
+            }
+         "-":(a,b)=>{
+         return this.currency+(a-b)
+         }
+        }*/
+    });
+
+     app.controller('oneCtrl',function ($scope,Cac1) {
+        console.log(Cac1["+"](1,2))
+    });
+```
+4. value
+- 调用的是factory
+- 值简单的时候用value和constant，用法一样
+```
+app.value('Cac1',{
+         "+":(a,b)=>a+b,
+         "-":(a,b)=>a-b
+
+    });
+    app.controller('oneCtrl',function ($scope,Cac1) {
+        console.log(Cac1["+"](1,2))
+    });
+```
+###$watch
+1. 作用：监控
+2. - param1：作用域上的属性名，可以使字符串，也可以是函数（只要页面中任意一个值变化就会执行，将函数返回的结果传递到第二个参数中）
+    - param2：函数
+```
+param1为函数：
+
+app.controller('myCtrl',function ($scope) {
+       $scope.$watch($scope.sum=function () {
+            return $scope.product.count*$scope.product.price;
+        },function (newVal) {
+            if(newVal>=100){
+                $scope.product.free=0;
+            }
+        })
+
+
+param1为字符串：
+
+$scope.$watch('sum()',function (newVal,oldVal) {
+            if(newVal>=40){
+                $scope.product.free=0;
+            }
+        })
+```
+###$apply
+1. 作用：不是angular中的方法，改变数据不会刷新视图，此时就用$apply进行强行刷新试图
+```
+<body ng-controller="myCtrl">
+{{date | date:'hh:mm:ss'}}
+<script src="node_modules/angular/angular.js"></script>
+<script>
+    var app=angular.module('appModule',[]);
+    app.controller('myCtrl',function ($scope) {
+        setInterval(function () {
+            $scope.date=Date.now();
+            $scope.$apply();
+        },1000)
+    })
+```
+2. angular中提供的服务，都可以自动调用$apply（），不需要手动调用，\$watch+\$apply可以实现双向绑定
+```
+app.controller('myCtrl',function ($scope,$interval) {
+        $interval(function () {
+            $scope.date=Date.now();
+        },1000)
+    })
+```
+```
+app.controller('myCtrl',function ($scope,$interval,) {
+        var timer=$interval(function () {
+            $scope.date=Date.now();
+            //取消定时器
+            $interval.cancel(timer)
+        },1000)
+    })
+```
+###控制器交互
+1. 控制器可以进行交互，可以通过：
+- $rootScope
+- 服务
+- 通过事件
+2. 交互的方法有：
+- $on（监听）
+- $emit（向上发射，并且包括自己）
+- $broadcast （向下发射，并且包括自己）
+
+**父子级交互**
+```
+儿子的控制器：
+$scope.$watch('count',function(){
+		$scope.$emit('爸爸付钱',$scope.count*$scope.price)
+})
+```
+- 儿子的监控器监控自己的数量区的变化，当他变化了，就把公式传递给父亲，让他执行
+```
+
+父亲的控制器：
+$scope.$on('爸爸付钱',function(e,data){
+		$scope.total=data;
+})
+```
+- 父亲得到了儿子的请求，把data（儿子上边公式的值）赋值到需要改变的变量上
+
+**平级交互**
+- 直接都向上发射到根作用域
+```
+app.controller('brother',function ($scope,$rootScope) {
+        $scope.$watch('total',function () {
+            $scope.$emit('mai',$scope.total)
+        })
+        $rootScope.$on('付钱',function (e,data) {
+            $scope.total=data;
+        });
+    });
+    app.controller('sister',function ($scope,$rootScope) {
+        $scope.name='可乐';
+        $scope.price=2.5;
+        $scope.count=4;
+        $scope.$watch('count',function () {
+            $scope.$emit('付钱',$scope.count*$scope.price)
+        })
+        $rootScope.$on('mai',function (e,data) {
+            $scope.count=data/$scope.price
+        })
+    })
+```
+
+
